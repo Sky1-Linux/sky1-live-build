@@ -4,17 +4,7 @@ sddm
 
 # Network
 network-manager
-network-manager-gnome
-
-# Audio
-pipewire
-pipewire-pulse
-wireplumber
-
-# Graphics (Mesa with Panthor)
-mesa-vulkan-drivers
-mesa-va-drivers
-libgl1-mesa-dri
+qml6-module-qtnetwork
 
 # Firmware
 firmware-linux
@@ -42,7 +32,7 @@ kate
 konsole
 gwenview
 okular
-spectacle
+kde-spectacle
 
 # System tools
 gparted

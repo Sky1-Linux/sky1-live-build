@@ -1,1 +1,1 @@
-deb [signed-by=/usr/share/keyrings/sky1-linux.asc] https://sky1-linux.github.io/apt sid main non-free-firmware
+deb https://sky1-linux.github.io/apt sid main non-free-firmware

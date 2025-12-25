@@ -1,0 +1,11 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Install Sky1 Linux
+GenericName=System Installer
+Comment=Install Sky1 Linux to your computer
+Exec=calamares-install-sky1
+Icon=calamares
+Terminal=false
+Categories=System;
+Keywords=installer;calamares;system;

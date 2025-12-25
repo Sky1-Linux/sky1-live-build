@@ -1,0 +1,5 @@
+[General]
+AutomountEnabled=true
+AutomountOnLogin=false
+AutomountOnPlugin=true
+AutomountUnknownDevices=true

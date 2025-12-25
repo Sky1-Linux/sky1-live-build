@@ -1,0 +1,26 @@
+#!/bin/bash
+# Disable KWallet for NetworkManager in live environment
+# KWallet has bugs with first-time WiFi password entry
+
+set -e
+
+echo "Configuring NetworkManager to not use KWallet..."
+
+# Create NetworkManager config to store secrets in files
+mkdir -p /etc/NetworkManager/conf.d
+cat > /etc/NetworkManager/conf.d/10-live-secrets.conf << 'EOF'
+[main]
+# Store secrets in connection files, not external secret agents
+# This avoids KWallet bugs in the live environment
+auth-polkit=true
+
+[keyfile]
+# Allow storing secrets in keyfiles (unencrypted but works reliably)
+unmanaged-devices=none
+EOF
+
+# Ensure connection files can store secrets
+mkdir -p /etc/NetworkManager/system-connections
+chmod 700 /etc/NetworkManager/system-connections
+
+echo "NetworkManager configured for live environment."

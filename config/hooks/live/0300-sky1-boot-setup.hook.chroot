@@ -1,0 +1,41 @@
+#!/bin/bash
+# Set up boot files for Sky1 (DTB, initrd)
+
+set -e
+
+echo "Setting up Sky1 boot files..."
+
+# Find Sky1 kernel version
+KERNEL_VERSION=$(ls /lib/modules/ | grep sky1 | head -1)
+
+if [ -z "$KERNEL_VERSION" ]; then
+    echo "ERROR: No Sky1 kernel found in /lib/modules/"
+    exit 1
+fi
+
+echo "Kernel version: $KERNEL_VERSION"
+
+# Generate initrd for Sky1 kernel if not present
+if [ ! -f "/boot/initrd.img-${KERNEL_VERSION}" ]; then
+    echo "Generating initrd for $KERNEL_VERSION..."
+    update-initramfs -c -k "$KERNEL_VERSION"
+fi
+
+# Create DTB directory in /boot for live-build to pick up
+mkdir -p /boot/dtbs
+
+# Find and copy Sky1 DTB
+DTB_SRC="/usr/lib/linux-image-${KERNEL_VERSION}/cix/sky1-orion-o6.dtb"
+if [ -f "$DTB_SRC" ]; then
+    cp "$DTB_SRC" /boot/dtbs/
+    echo "Copied DTB: $DTB_SRC -> /boot/dtbs/"
+else
+    echo "WARNING: DTB not found at $DTB_SRC"
+    find /usr/lib/linux-image-* -name "*.dtb" -path "*/cix/*" 2>/dev/null | head -5
+fi
+
+# List boot files
+echo "Boot files:"
+ls -la /boot/vmlinuz-* /boot/initrd.img-* /boot/dtbs/ 2>/dev/null || true
+
+echo "Boot setup complete."

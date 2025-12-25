@@ -1,8 +1,8 @@
 # Sky1 Linux packages (from Sky1 apt repo)
 
 # Kernel
-linux-image-6.18-sky1
-linux-headers-6.18-sky1
+linux-image-6.18.2-sky1
+linux-headers-6.18.2-sky1
 
 # Firmware
 sky1-firmware
