@@ -1,7 +1,7 @@
 #!/bin/bash
 # Sky1 Linux bootloader installation script
 # Installs patched GRUB with CTRL key fix and generates proper grub.cfg
-# Runs outside chroot (dontChroot: true) - Calamares passes ROOT_MOUNT_POINT
+# Runs outside chroot (dontChroot: true) - receives ROOT as $1 from Calamares
 
 set -e
 
@@ -10,8 +10,8 @@ echo "=== Sky1 Bootloader Installation ==="
 echo "Date: $(date)"
 echo "ROOT_MOUNT_POINT=$ROOT_MOUNT_POINT"
 
-# Use Calamares-provided ROOT_MOUNT_POINT
-CHROOT="$ROOT_MOUNT_POINT"
+# Use Calamares-provided ROOT (passed as $1, fallback to env var)
+CHROOT="${1:-$ROOT_MOUNT_POINT}"
 
 if [ -z "$CHROOT" ] || [ ! -d "$CHROOT" ]; then
     echo "ERROR: ROOT_MOUNT_POINT not set or invalid"
