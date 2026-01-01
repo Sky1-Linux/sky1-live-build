@@ -1,22 +1,28 @@
 #!/bin/bash
 # Sky1 Linux bootloader installation script
 # Installs patched GRUB with CTRL key fix and generates proper grub.cfg
-# Runs outside chroot (dontChroot: true) and finds Calamares mount path
+# Runs outside chroot (dontChroot: true) - Calamares passes ROOT_MOUNT_POINT
 
 set -e
 
-# Find Calamares chroot path
-CHROOT=$(mount | grep proc | grep -E "calamares|tmp" | head -1 | awk '{print $3}' | sed -e "s#/proc##g")
+exec >> /tmp/bootloader.log 2>&1
+echo "=== Sky1 Bootloader Installation ==="
+echo "Date: $(date)"
+echo "ROOT_MOUNT_POINT=$ROOT_MOUNT_POINT"
+
+# Use Calamares-provided ROOT_MOUNT_POINT
+CHROOT="$ROOT_MOUNT_POINT"
 
 if [ -z "$CHROOT" ] || [ ! -d "$CHROOT" ]; then
-    echo "ERROR: Could not find Calamares chroot path" >> /tmp/bootloader.log
-    echo "Mount output:" >> /tmp/bootloader.log
-    mount >> /tmp/bootloader.log
+    echo "ERROR: ROOT_MOUNT_POINT not set or invalid"
+    echo "Environment:"
+    env | sort
+    echo "Mount output:"
+    mount
     exit 1
 fi
 
-echo "=== Sky1 Bootloader Installation ===" >> /tmp/bootloader.log
-echo "Chroot path: $CHROOT" >> /tmp/bootloader.log
+echo "Chroot path: $CHROOT"
 
 # Find EFI mount point
 EFI_MOUNT=$(mount | grep "$CHROOT/boot/efi" | awk '{print $3}')
@@ -24,17 +30,18 @@ if [ -z "$EFI_MOUNT" ]; then
     # Try to find EFI partition and mount it
     EFI_DEV=$(grep "/boot/efi" "$CHROOT/etc/fstab" | awk '{print $1}')
     if [ -n "$EFI_DEV" ]; then
-        echo "Mounting EFI partition $EFI_DEV" >> /tmp/bootloader.log
+        echo "Mounting EFI partition $EFI_DEV"
         mkdir -p "$CHROOT/boot/efi"
         mount "$EFI_DEV" "$CHROOT/boot/efi"
         EFI_MOUNT="$CHROOT/boot/efi"
     else
-        echo "ERROR: Could not find EFI partition" >> /tmp/bootloader.log
+        echo "ERROR: Could not find EFI partition"
+        cat "$CHROOT/etc/fstab"
         exit 1
     fi
 fi
 
-echo "EFI mount: $EFI_MOUNT" >> /tmp/bootloader.log
+echo "EFI mount: $EFI_MOUNT"
 
 PATCHED_GRUB="$CHROOT/usr/share/sky1/grubaa64-sky1.efi"
 
@@ -42,12 +49,12 @@ PATCHED_GRUB="$CHROOT/usr/share/sky1/grubaa64-sky1.efi"
 ROOT_UUID=$(grep -E '^\s*UUID=[^ ]+\s+/\s' "$CHROOT/etc/fstab" | grep -oP 'UUID=\K[^ ]+' | head -1)
 
 if [ -z "$ROOT_UUID" ]; then
-    echo "ERROR: Could not determine root partition UUID" >> /tmp/bootloader.log
-    cat "$CHROOT/etc/fstab" >> /tmp/bootloader.log
+    echo "ERROR: Could not determine root partition UUID"
+    cat "$CHROOT/etc/fstab"
     exit 1
 fi
 
-echo "Root UUID: $ROOT_UUID" >> /tmp/bootloader.log
+echo "Root UUID: $ROOT_UUID"
 
 # Create EFI directory structure
 mkdir -p "$EFI_MOUNT/EFI/BOOT"
@@ -58,17 +65,17 @@ mkdir -p "$EFI_MOUNT/GRUB"
 cp "$PATCHED_GRUB" "$EFI_MOUNT/EFI/BOOT/BOOTAA64.EFI"
 cp "$PATCHED_GRUB" "$EFI_MOUNT/EFI/sky1/grubaa64.efi"
 
-echo "Copied patched GRUB" >> /tmp/bootloader.log
+echo "Copied patched GRUB"
 
 # Find kernel version
 KERNEL_VERSION=$(ls "$CHROOT/boot/vmlinuz-"* 2>/dev/null | head -1 | sed "s|$CHROOT/boot/vmlinuz-||")
 if [ -z "$KERNEL_VERSION" ]; then
-    echo "ERROR: Could not find kernel" >> /tmp/bootloader.log
-    ls -la "$CHROOT/boot/" >> /tmp/bootloader.log
+    echo "ERROR: Could not find kernel"
+    ls -la "$CHROOT/boot/"
     exit 1
 fi
 
-echo "Kernel version: $KERNEL_VERSION" >> /tmp/bootloader.log
+echo "Kernel version: $KERNEL_VERSION"
 
 # Generate grub.cfg
 cat > "$EFI_MOUNT/GRUB/GRUB.CFG" << EOF
@@ -136,10 +143,10 @@ menuentry 'Sky1 Linux (recovery mode)' {
 }
 EOF
 
-echo "Generated GRUB.CFG" >> /tmp/bootloader.log
-cat "$EFI_MOUNT/GRUB/GRUB.CFG" >> /tmp/bootloader.log
+echo "Generated GRUB.CFG"
+cat "$EFI_MOUNT/GRUB/GRUB.CFG"
 
-echo "=== EFI Contents ===" >> /tmp/bootloader.log
-ls -laR "$EFI_MOUNT" >> /tmp/bootloader.log
+echo "=== EFI Contents ==="
+ls -laR "$EFI_MOUNT"
 
-echo "=== Bootloader installation complete ===" >> /tmp/bootloader.log
+echo "=== Bootloader installation complete ==="
