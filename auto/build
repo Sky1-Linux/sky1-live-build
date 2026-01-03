@@ -74,15 +74,28 @@ cp config/includes.chroot/usr/share/sky1/grubaa64-sky1.efi binary/EFI/boot/boota
 cp config/includes.chroot/usr/share/sky1/grubaa64-sky1.efi binary/EFI/boot/grubaa64.efi
 echo "Copied GRUB and config to ISO filesystem"
 
-# Generate ISO
+# Generate ISO with timestamp label
 echo ""
 echo "=== Generating ISO ==="
-ISO_NAME="sky1-linux-$(date +%Y%m%d).iso"
+ISO_DATE=$(date +%Y%m%d)
+ISO_LABEL="SKY1_${ISO_DATE}"
+ISO_NAME="sky1-linux-${ISO_DATE}.iso"
+
+# Update grub.cfg with current label
+echo "Setting ISO label: $ISO_LABEL"
+sed -i "s|/dev/disk/by-label/SKY1_LIVE|/dev/disk/by-label/${ISO_LABEL}|g" binary/GRUB/grub.cfg
+
+# Also update the EFI image grub.cfg
+EFI_MOUNT=$(mktemp -d)
+mount -o loop binary/boot/grub/efi.img "$EFI_MOUNT"
+sed -i "s|/dev/disk/by-label/SKY1_LIVE|/dev/disk/by-label/${ISO_LABEL}|g" "$EFI_MOUNT/GRUB/grub.cfg"
+umount "$EFI_MOUNT"
+rmdir "$EFI_MOUNT"
 
 xorriso -as mkisofs \
     -r -J -joliet-long -l -iso-level 3 \
     -A "Sky1 Linux" \
-    -V "SKY1_LIVE" \
+    -V "$ISO_LABEL" \
     -e boot/grub/efi.img \
     -no-emul-boot \
     -append_partition 2 0xef binary/boot/grub/efi.img \
