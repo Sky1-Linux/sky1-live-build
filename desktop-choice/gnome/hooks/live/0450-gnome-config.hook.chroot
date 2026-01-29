@@ -8,6 +8,8 @@ echo "Configuring GNOME desktop (base settings)..."
 
 # Set GDM as default display manager
 echo "/usr/sbin/gdm3" > /etc/X11/default-display-manager
+# Also set systemd symlink (this is what actually determines which DM runs)
+ln -sf /lib/systemd/system/gdm.service /etc/systemd/system/display-manager.service
 
 # Create base GDM config (NO autologin - live overlay adds it)
 mkdir -p /etc/gdm3
