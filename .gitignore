@@ -11,9 +11,12 @@
 # live-build directories
 .build/
 cache/
-chroot/
+chroot
 binary/
 source/
+
+# Desktop-specific chroots
+desktop-choice/*/chroot/
 
 # Generated config
 config/binary

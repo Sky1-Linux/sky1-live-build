@@ -61,11 +61,13 @@ LOADOUT_DIR="package-loadouts/$LOADOUT"
 [ -d "$LOADOUT_DIR" ] || { echo "Error: Loadout directory not found: $LOADOUT_DIR"; exit 1; }
 
 OUTPUT_NAME="sky1-linux-${DESKTOP}-${LOADOUT}-${DATE}"
+CHROOT_DIR="desktop-choice/${DESKTOP}/chroot"
 
 echo "=== Building Sky1 Linux ==="
 echo "Desktop: $DESKTOP"
 echo "Loadout: $LOADOUT"
 echo "Format:  $FORMAT"
+echo "Chroot:  $CHROOT_DIR"
 echo "Output:  $OUTPUT_NAME.$FORMAT"
 echo ""
 
@@ -75,11 +77,43 @@ if [ "$FORMAT" = "image" ] && [ "$(id -u)" -ne 0 ]; then
     exit 1
 fi
 
+# Set up desktop-specific chroot
+# live-build expects 'chroot/' directory, so we symlink to the desktop-specific one
+setup_chroot_symlink() {
+    # Remove existing chroot symlink if present
+    if [ -L "chroot" ]; then
+        rm -f chroot
+    fi
+
+    # If chroot exists as a real directory (legacy), warn but don't delete
+    if [ -d "chroot" ] && [ ! -L "chroot" ]; then
+        echo "Warning: 'chroot' exists as a directory, not a symlink."
+        echo "Consider moving it to desktop-choice/<desktop>/chroot for the appropriate desktop."
+        echo "Continuing with existing chroot..."
+        return
+    fi
+
+    # Create symlink to desktop-specific chroot
+    if [ -d "$CHROOT_DIR" ]; then
+        echo "Using existing chroot: $CHROOT_DIR"
+        ln -sf "$CHROOT_DIR" chroot
+    else
+        echo "Will create new chroot: $CHROOT_DIR"
+    fi
+}
+
 # Clean if requested
 if [ "$CLEAN" = "clean" ]; then
-    echo "Cleaning previous build..."
+    echo "Cleaning previous build for $DESKTOP..."
+    rm -f chroot
+    if [ -d "$CHROOT_DIR" ]; then
+        sudo rm -rf "$CHROOT_DIR"
+    fi
     sudo lb clean --purge 2>/dev/null || true
 fi
+
+# Set up the chroot symlink
+setup_chroot_symlink
 
 # Apply desktop choice (use copies, not symlinks, so they survive lb clean)
 echo "Applying desktop choice: $DESKTOP..."
@@ -106,11 +140,25 @@ if [ -f "$LOADOUT_DIR/package-lists/loadout.list.chroot" ]; then
     cp -f "$LOADOUT_DIR/package-lists/loadout.list.chroot" "config/package-lists/loadout.list.chroot"
 fi
 
+# After lb build, move chroot to desktop-specific directory
+finalize_chroot() {
+    # If lb build created a 'chroot' directory (not symlink), move it
+    if [ -d "chroot" ] && [ ! -L "chroot" ]; then
+        echo "Moving chroot to $CHROOT_DIR..."
+        mkdir -p "$(dirname "$CHROOT_DIR")"
+        mv chroot "$CHROOT_DIR"
+        ln -sf "$CHROOT_DIR" chroot
+    fi
+}
+
 # Build based on format
 if [ "$FORMAT" = "iso" ]; then
     echo ""
     echo "Building ISO with live-build..."
     sudo lb build 2>&1 | tee build.log
+
+    # Finalize chroot naming
+    finalize_chroot
 
     # Find and rename output
     ISO_FILE=$(ls sky1-linux-*.iso 2>/dev/null | grep -v "$OUTPUT_NAME" | head -1)
@@ -127,13 +175,18 @@ if [ "$FORMAT" = "iso" ]; then
 
 elif [ "$FORMAT" = "image" ]; then
     # For disk images, we need a chroot first
-    if [ ! -d "chroot" ]; then
+    if [ ! -d "$CHROOT_DIR" ] && [ ! -d "chroot" ]; then
         echo ""
-        echo "No chroot found. Building chroot first..."
+        echo "No chroot found for $DESKTOP. Building chroot first..."
         sudo lb build 2>&1 | tee build.log
 
-        # lb build creates the full ISO, but we only need the chroot
-        # The chroot will now exist for build-image.sh to use
+        # Finalize chroot naming
+        finalize_chroot
+    fi
+
+    # Ensure symlink is correct
+    if [ -d "$CHROOT_DIR" ] && [ ! -L "chroot" ]; then
+        ln -sf "$CHROOT_DIR" chroot
     fi
 
     echo ""

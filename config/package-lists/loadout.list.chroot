@@ -23,8 +23,5 @@ inkscape
 # ===== Communication =====
 thunderbird
 
-# ===== Terminal =====
-ptyxis
-
 # ===== PDF =====
 # (evince/okular/atril provided by desktop choice)

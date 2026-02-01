@@ -22,6 +22,7 @@ LOADOUT="${2:-desktop}"
 IMAGE_SIZE=14              # GB - fits 16GB SD cards, expands on first boot
 DATE=$(date +%Y%m%d)
 IMAGE_NAME="sky1-linux-${DESKTOP}-${LOADOUT}-${DATE}.img"
+CHROOT_DIR="desktop-choice/${DESKTOP}/chroot"
 
 EFI_SIZE=512               # MB
 ROOT_SIZE=$((IMAGE_SIZE * 1024 - EFI_SIZE))  # MB
@@ -32,15 +33,27 @@ if [ "$(id -u)" -ne 0 ]; then
     exit 1
 fi
 
-# Check for chroot
-if [ ! -d "chroot" ]; then
-    echo "Error: No chroot found. Run 'lb build' or 'build.sh' first to create the chroot."
+# Check for desktop-specific chroot
+if [ -d "$CHROOT_DIR" ]; then
+    CHROOT_SOURCE="$CHROOT_DIR"
+elif [ -L "chroot" ] && [ -d "chroot" ]; then
+    # Follow symlink if it exists and points to valid directory
+    CHROOT_SOURCE="$(readlink -f chroot)"
+    echo "Using chroot via symlink: $CHROOT_SOURCE"
+elif [ -d "chroot" ]; then
+    echo "Warning: Using legacy 'chroot' directory"
+    echo "         Consider running 'build.sh $DESKTOP desktop iso' for an isolated chroot"
+    CHROOT_SOURCE="chroot"
+else
+    echo "Error: No chroot found for $DESKTOP."
+    echo "       Run 'build.sh $DESKTOP desktop iso' first to create the chroot."
     exit 1
 fi
 
 echo "=== Building Sky1 Linux Disk Image ==="
 echo "Desktop: $DESKTOP"
 echo "Loadout: $LOADOUT"
+echo "Chroot:  $CHROOT_SOURCE"
 echo "Image size: ${IMAGE_SIZE}GB"
 echo "Output: $IMAGE_NAME"
 echo ""
@@ -65,7 +78,7 @@ trap cleanup EXIT
 
 # Step 1: Create sparse image file
 echo "[1/15] Creating ${IMAGE_SIZE}GB sparse image..."
-rm -f "$IMAGE_NAME"
+rm -f "$IMAGE_NAME" "${IMAGE_NAME}.xz"
 truncate -s ${IMAGE_SIZE}G "$IMAGE_NAME"
 
 # Step 2: Partition with GPT
@@ -105,7 +118,7 @@ mkdir -p "$MOUNT_DIR/boot/efi"
 mount "$EFI_PART" "$MOUNT_DIR/boot/efi"
 
 # Step 6: Copy rootfs from chroot
-echo "[6/15] Copying rootfs from chroot (this may take a while)..."
+echo "[6/15] Copying rootfs from $CHROOT_SOURCE (this may take a while)..."
 rsync -aHAXq --numeric-ids \
     --exclude='/proc/*' \
     --exclude='/sys/*' \
@@ -114,7 +127,7 @@ rsync -aHAXq --numeric-ids \
     --exclude='/tmp/*' \
     --exclude='/var/cache/apt/archives/*.deb' \
     --exclude='/var/lib/apt/lists/*' \
-    chroot/ "$MOUNT_DIR/"
+    "$CHROOT_SOURCE/" "$MOUNT_DIR/"
 
 # Step 7: Remove live-boot packages, add disk image specific
 echo "[7/15] Configuring for installed system..."
@@ -326,15 +339,27 @@ LOOP=""
 rmdir "$MOUNT_DIR"
 MOUNT_DIR=""
 
-# Step 16: Compress
-echo "[16/16] Compressing image (this may take a while)..."
-xz -T0 -9 -v "$IMAGE_NAME"
-
-echo ""
-echo "=== Build Complete ==="
-ls -lh "${IMAGE_NAME}.xz"
-echo ""
-echo "To write to disk:"
-echo "  xzcat ${IMAGE_NAME}.xz | sudo dd of=/dev/sdX bs=4M status=progress"
-echo ""
-echo "Or use Balena Etcher directly with the .img.xz file"
+# Step 16: Compress (skip with SKIP_COMPRESS=1)
+if [ "${SKIP_COMPRESS:-}" = "1" ]; then
+    echo "[16/16] Skipping compression (SKIP_COMPRESS=1)"
+    echo ""
+    echo "=== Build Complete (uncompressed) ==="
+    ls -lh "${IMAGE_NAME}"
+    echo ""
+    echo "To write directly to disk:"
+    echo "  sudo dd if=${IMAGE_NAME} of=/dev/sdX bs=4M status=progress"
+    echo ""
+    echo "To compress later:"
+    echo "  xz -T0 -9 -v ${IMAGE_NAME}"
+else
+    echo "[16/16] Compressing image (this may take a while)..."
+    xz -T0 -9 -v "$IMAGE_NAME"
+    echo ""
+    echo "=== Build Complete ==="
+    ls -lh "${IMAGE_NAME}.xz"
+    echo ""
+    echo "To write to disk:"
+    echo "  xzcat ${IMAGE_NAME}.xz | sudo dd of=/dev/sdX bs=4M status=progress"
+    echo ""
+    echo "Or use Balena Etcher directly with the .img.xz file"
+fi

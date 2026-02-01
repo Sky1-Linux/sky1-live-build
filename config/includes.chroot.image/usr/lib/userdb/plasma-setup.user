@@ -1,0 +1,9 @@
+{
+    "userName": "plasma-setup",
+    "uid": 1100,
+    "gid": 1100,
+    "realName": "Plasma Setup",
+    "homeDirectory": "/run/plasma-setup",
+    "shell": "/bin/bash",
+    "disposition": "regular"
+}

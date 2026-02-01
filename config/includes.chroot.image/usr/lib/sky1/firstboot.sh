@@ -82,12 +82,12 @@ detect_board_and_cleanup_grub() {
         *orion-o6n*|*radxa,orion-o6n*)
             BOARD="o6n"
             KEEP_DTB="sky1-orion-o6n.dtb"
-            REMOVE_DTB="sky1-orion-o6.dtb"
+            REMOVE_DTB="/sky1-orion-o6.dtb"
             ;;
         *orion-o6*|*radxa,orion-o6*)
             BOARD="o6"
             KEEP_DTB="sky1-orion-o6.dtb"
-            REMOVE_DTB="sky1-orion-o6n.dtb"
+            REMOVE_DTB="/sky1-orion-o6n.dtb"
             ;;
         *)
             echo "Unknown board: $BOARD_COMPATIBLE, keeping all GRUB entries"
@@ -98,7 +98,7 @@ detect_board_and_cleanup_grub() {
     echo "Detected board: $BOARD (compatible: $BOARD_COMPATIBLE)"
 
     # Update GRUB config to remove entries for other board
-    GRUB_CFG="/boot/efi/GRUB/GRUB.CFG"
+    GRUB_CFG="/boot/efi/GRUB/grub.cfg"
     if [ -f "$GRUB_CFG" ]; then
         echo "Cleaning up GRUB entries for $BOARD..."
 
