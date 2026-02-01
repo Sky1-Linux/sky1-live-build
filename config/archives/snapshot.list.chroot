@@ -1,2 +1,0 @@
-# Debian snapshot for pinned Mesa 25.2.8 (Panthor fix)
-deb [check-valid-until=no] https://snapshot.debian.org/archive/debian/20251215T000000Z/ sid main

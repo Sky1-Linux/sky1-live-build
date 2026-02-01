@@ -1,7 +1,0 @@
-# Pin Mesa to 25.2.8 due to Panthor regression in 25.3.x
-# See: https://gitlab.freedesktop.org/mesa/mesa/-/issues/XXXXX
-# Remove this pin when Mesa 25.4+ fixes the DRM_IOCTL_PANTHOR_BO_CREATE issue
-
-Package: libegl-mesa0 libgl1-mesa-dri libglx-mesa0 libgbm1 mesa-libgallium mesa-vulkan-drivers
-Pin: version 25.2.8*
-Pin-Priority: 1000
