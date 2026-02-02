@@ -68,7 +68,7 @@ rm -f "$CHROOT_DIR/etc/kernel/postinst.d/z50-raspi-firmware"
 rm -f "$CHROOT_DIR/etc/kernel/postrm.d/z50-raspi-firmware"
 
 # Step 1: Update apt sources inside chroot for the requested track
-echo "[1/7] Updating apt sources for track: $TRACK..."
+echo "[1/8] Updating apt sources for track: $TRACK..."
 SOURCES_FILE="$CHROOT_DIR/etc/apt/sources.list.d/sky1.list"
 if [ "$TRACK" = "main" ]; then
     echo "deb ${APT_URL} sid main non-free-firmware" > "$SOURCES_FILE"
@@ -76,12 +76,25 @@ else
     echo "deb ${APT_URL} sid main ${TRACK} non-free-firmware" > "$SOURCES_FILE"
 fi
 
-echo "[2/7] Updating package lists..."
+echo "[2/8] Updating package lists..."
 chroot "$CHROOT_DIR" apt-get update -qq
+
+# Show candidate version and warn if no expected-version pinning
+META_CHECK=$(echo "$INSTALL_META" | awk '{print $1}')
+CANDIDATE=$(chroot "$CHROOT_DIR" apt-cache policy "$META_CHECK" 2>/dev/null \
+    | grep 'Candidate:' | awk '{print $2}')
+
+if [ -z "$EXPECTED_VERSION" ]; then
+    echo ""
+    echo "  NOTE: No expected-version given — will install whatever CDN serves"
+    echo "  Candidate: $META_CHECK $CANDIDATE"
+    echo "  Tip: after a fresh apt push, pass the expected version to wait for CDN:"
+    echo "    sudo $0 $DESKTOP $TRACK <version>"
+    echo ""
+fi
 
 # If expected version given, wait for apt to see it
 if [ -n "$EXPECTED_VERSION" ]; then
-    META_CHECK=$(echo "$INSTALL_META" | awk '{print $1}')  # first package (linux-image-sky1[-track])
     MAX_RETRIES=10
     RETRY_DELAY=15
     for i in $(seq 1 $MAX_RETRIES); do
@@ -103,7 +116,7 @@ if [ -n "$EXPECTED_VERSION" ]; then
 fi
 
 # Step 3: Swap kernel meta packages if needed
-echo "[3/7] Ensuring correct kernel track..."
+echo "[3/8] Ensuring correct kernel track..."
 
 # All possible kernel meta packages across all tracks
 ALL_META="linux-image-sky1 linux-headers-sky1 linux-sky1"
@@ -130,10 +143,40 @@ fi
 echo "  Installing: $INSTALL_META"
 chroot "$CHROOT_DIR" apt-get install -y $INSTALL_META
 
-echo "[4/7] Upgrading packages..."
+echo "[4/8] Upgrading packages..."
 chroot "$CHROOT_DIR" apt-get dist-upgrade -y
 
-echo "[5/7] Removing deprecated DKMS packages (if present)..."
+# Purge versioned kernel packages that don't belong to the target track.
+# autoremove often misses these because they weren't auto-installed.
+echo "[5/8] Removing old kernel packages..."
+
+# Find the exact versioned packages that the meta packages depend on — these are the keepers
+KEEP_PKGS=""
+for meta in $INSTALL_META; do
+    dep=$(chroot "$CHROOT_DIR" dpkg-query -W -f='${Depends}' "$meta" 2>/dev/null \
+        | sed 's/ (.*)//g')  # strip version constraints
+    [ -n "$dep" ] && KEEP_PKGS="$KEEP_PKGS $dep"
+done
+
+# Find all installed versioned sky1 kernel packages (image, headers, dbg)
+STALE_KERNELS=""
+for pkg in $(chroot "$CHROOT_DIR" dpkg-query -W -f='${Package}\n' 2>/dev/null \
+        | grep -E '^linux-(image|headers)-[0-9].*-sky1'); do
+    # Keep if it's a dependency of the current meta packages
+    if echo "$KEEP_PKGS" | grep -qw "$pkg"; then
+        continue
+    fi
+    STALE_KERNELS="$STALE_KERNELS $pkg"
+done
+
+if [ -n "$STALE_KERNELS" ]; then
+    echo "  Purging stale kernels:$STALE_KERNELS"
+    chroot "$CHROOT_DIR" apt-get purge -y $STALE_KERNELS
+else
+    echo "  No stale kernel packages found"
+fi
+
+echo "[6/8] Removing deprecated DKMS packages (if present)..."
 chroot "$CHROOT_DIR" apt-get remove -y \
     r8126-dkms sky1-vpu-dkms sky1-npu-dkms 2>/dev/null || true
 
@@ -146,7 +189,7 @@ for kdir in "$MODULES_DIR"/*/updates/dkms; do
     fi
 done
 
-echo "[6/7] Cleaning up and regenerating initramfs..."
+echo "[7/8] Cleaning up and regenerating initramfs..."
 chroot "$CHROOT_DIR" apt-get autoremove -y
 chroot "$CHROOT_DIR" apt-get clean
 chroot "$CHROOT_DIR" update-initramfs -u -k all
@@ -158,7 +201,7 @@ if [ -z "$KERNEL" ]; then
 fi
 
 echo ""
-echo "[7/7] Verifying..."
+echo "[8/8] Verifying..."
 
 # List all kernels in chroot
 echo "  Kernels in chroot:"
