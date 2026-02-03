@@ -1,6 +1,6 @@
-# Sky1 Linux Live Build
+# Sky1 Image Build
 
-Live-build configuration for creating Sky1 Linux live ISOs and installable disk images.
+Disk image and live ISO build system for Sky1 Linux.
 
 ## Requirements
 
@@ -63,7 +63,7 @@ sync
 ## Project Structure
 
 ```
-sky1-live-build/
+sky1-image-build/
 ├── scripts/
 │   ├── build.sh              # Main build script
 │   └── build-image.sh        # Disk image builder
