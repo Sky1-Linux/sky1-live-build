@@ -1,0 +1,5 @@
+#!/bin/sh
+# Sky1 Linux kernel postinst hook
+# Copies DTBs and regenerates GRUB config after kernel installation
+set -e
+/usr/share/sky1/update-boot "$@"

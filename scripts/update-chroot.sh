@@ -70,10 +70,11 @@ rm -f "$CHROOT_DIR/etc/kernel/postrm.d/z50-raspi-firmware"
 # Step 1: Update apt sources inside chroot for the requested track
 echo "[1/8] Updating apt sources for track: $TRACK..."
 SOURCES_FILE="$CHROOT_DIR/etc/apt/sources.list.d/sky1.list"
+SIGNED_BY="[signed-by=/usr/share/keyrings/sky1-linux.asc]"
 if [ "$TRACK" = "main" ]; then
-    echo "deb ${APT_URL} sid main non-free-firmware" > "$SOURCES_FILE"
+    echo "deb ${SIGNED_BY} ${APT_URL} sid main non-free-firmware" > "$SOURCES_FILE"
 else
-    echo "deb ${APT_URL} sid main ${TRACK} non-free-firmware" > "$SOURCES_FILE"
+    echo "deb ${SIGNED_BY} ${APT_URL} sid main ${TRACK} non-free-firmware" > "$SOURCES_FILE"
 fi
 
 echo "[2/8] Updating package lists..."

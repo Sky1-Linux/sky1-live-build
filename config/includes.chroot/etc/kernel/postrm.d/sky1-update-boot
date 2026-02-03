@@ -1,0 +1,5 @@
+#!/bin/sh
+# Sky1 Linux kernel postrm hook
+# Cleans up DTBs and regenerates GRUB config after kernel removal
+set -e
+/usr/share/sky1/update-boot "$@"

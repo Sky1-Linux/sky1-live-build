@@ -83,6 +83,10 @@ e2fsprogs
 btrfs-progs
 xfsprogs
 
+# ===== Package Management =====
+apt-listbugs
+apt-listchanges
+
 # ===== System Tools =====
 gparted
 gnome-disk-utility
