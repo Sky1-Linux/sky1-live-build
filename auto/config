@@ -11,8 +11,8 @@ lb config noauto \
     --archive-areas "main contrib non-free non-free-firmware" \
     --apt-recommends true \
     --apt-source-archives false \
-    --firmware-binary true \
-    --firmware-chroot true \
+    --firmware-binary false \
+    --firmware-chroot false \
     --memtest none \
     --win32-loader false \
     --iso-application "Sky1 Linux" \

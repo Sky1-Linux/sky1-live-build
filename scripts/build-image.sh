@@ -274,6 +274,14 @@ fi
 
 echo "Kernel version: $KERNEL_VERSION"
 
+# Verify initrd exists - abort if missing (indicates broken chroot)
+if [ ! -f "$MOUNT_DIR/boot/initrd.img-$KERNEL_VERSION" ]; then
+    echo "ERROR: initrd.img-$KERNEL_VERSION not found in chroot /boot/"
+    echo "       This usually means initramfs-tools failed to install."
+    echo "       Check the build log and try a clean rebuild."
+    exit 1
+fi
+
 # Ensure DTBs are in /boot/dtbs (copy from kernel package location if needed)
 mkdir -p "$MOUNT_DIR/boot/dtbs"
 DTB_SOURCE="$MOUNT_DIR/usr/lib/linux-image-$KERNEL_VERSION/cix"
